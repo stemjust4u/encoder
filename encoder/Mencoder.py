@@ -68,7 +68,7 @@ class Encoder:
       pi.set_watchdog(gpio, self._watchdog)
       self.logger.info(self._cb)
 
-   def _cbf(self, gpio, level, tick):
+   def _cbf(self, gpio, level, tick):   # gpio is pin with level change. level is rising/falling(or none), tick is time counter (usec)
 
       if level == 1: # Rising edge.
 
@@ -94,7 +94,7 @@ class Encoder:
       """
       RPM = 0.0
       if self._period is not None:
-         RPM = 60000000.0 / (self._period * self.pulses_per_rev)
+         RPM = 60000000.0 / (self._period * self.pulses_per_rev)  # min(us)/(period(us)*pulse/rev)
          if RPM < self.min_RPM:
             RPM = 0.0
       self.outgoing[self.rpmkey] = int(RPM)
