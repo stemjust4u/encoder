@@ -38,20 +38,13 @@ class Encoder2:
 
         pi.set_mode(gpio, pigpio.INPUT)
 
-        self._cb = pi.callback(gpio, pigpio.EITHER_EDGE, self._cbf)
+        self._cb = pi.callback(gpio, pigpio.RISING_EDGE, self._cbf)
 
     def _cbf(self, gpio, level, tick):
 
-        if gpio == 5: # Rising edge.
-            print(self._high_tick)
+        if level == 1: # Rising edge.
             if self._high_tick is not None:
-                t = pigpio.tickDiff(self._high_tick, tick)
-
-                if self._period is not None:
-                    self._period = self._period + t
-                else:
-                    self._period = t
-
+                self._period = pigpio.tickDiff(self._high_tick, tick)
             self._high_tick = tick
 
     def RPM(self):
@@ -59,12 +52,11 @@ class Encoder2:
         Returns the RPM.
         """
         RPM = 0.0
-        print(self._period)
+
         if self._period is not None:
             RPM = 60000000.0 / (self._period * self.pulses_per_rev)
-            #if RPM < self.min_RPM:
-            #    RPM = 0.0
-
+            if RPM < 5:
+                RPM = 0.0
         return RPM
 
 if __name__ == "__main__":

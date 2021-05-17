@@ -4,14 +4,14 @@
 # 2016-01-20
 # Public Domain
 
-import time
+import time, logging
 import pigpio # http://abyz.co.uk/rpi/pigpio/python.html
 
 class Encoder:
    """
    A class to read speedometer pulses and calculate the RPM.
    """
-   def __init__(self, pi, gpio, pulses_per_rev=20.0, weighting=0.0, min_RPM=5.0):
+   def __init__(self, pi, gpio, rpmkey='rpmi', pulses_per_rev=20.0, weighting=0.0, min_RPM=5.0, logger=None):
       """
       Instantiate with the Pi and gpio of the RPM signal
       to monitor.
@@ -31,7 +31,16 @@ class Encoder:
       """
       self.pi = pi
       self.gpio = gpio
+      self.rpmkey = rpmkey
+      self.outgoing = {}
       self.pulses_per_rev = pulses_per_rev
+      if logger is not None:                        # Use logger passed as argument
+            self.logger = logger
+      elif len(logging.getLogger().handlers) == 0:   # Root logger does not exist and no custom logger passed
+         logging.basicConfig(level=logging.DEBUG)      # Create root logger
+         self.logger = logging.getLogger(__name__)    # Create from root logger
+      else:                                          # Root logger already exists and no custom logger passed
+         self.logger = logging.getLogger(__name__)    # Create from root logger     
 
       if min_RPM > 1000.0:
          min_RPM = 1000.0
@@ -57,6 +66,7 @@ class Encoder:
 
       self._cb = pi.callback(gpio, pigpio.RISING_EDGE, self._cbf)
       pi.set_watchdog(gpio, self._watchdog)
+      self.logger.info(self._cb)
 
    def _cbf(self, gpio, level, tick):
 
@@ -69,7 +79,7 @@ class Encoder:
                self._period = (self._old * self._period) + (self._new * t)
             else:
                self._period = t
-
+         if self._period is not None: self.logger.debug("period:{0:.1f} ms".format(self._period/1000))
          self._high_tick = tick
 
       elif level == 2: # Watchdog timeout.
@@ -78,7 +88,7 @@ class Encoder:
             if self._period < 2000000000:
                self._period += (self._watchdog * 1000)
 
-   def RPM(self):
+   def getdata(self):
       """
       Returns the RPM.
       """
@@ -87,8 +97,8 @@ class Encoder:
          RPM = 60000000.0 / (self._period * self.pulses_per_rev)
          if RPM < self.min_RPM:
             RPM = 0.0
-
-      return RPM
+      self.outgoing[self.rpmkey] = int(RPM)
+      return self.outgoing
 
    def cancel(self):
       """
@@ -108,7 +118,7 @@ if __name__ == "__main__":
 
    pi = pigpio.pi()
 
-   p = Encoder(pi, gpioPin)
+   encoder1 = Encoder(pi, gpioPin)
 
    start = time.time()
 
@@ -116,10 +126,10 @@ if __name__ == "__main__":
 
       time.sleep(SAMPLE_TIME)
 
-      RPM = p.RPM()
+      rpm = encoder1.getdata()
      
-      print("RPM={}".format(int(RPM+0.5)))
+      print(rpm)
 
-   p.cancel()
+   encoder1.cancel()
 
    pi.stop()
