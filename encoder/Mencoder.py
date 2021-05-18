@@ -71,19 +71,15 @@ class Encoder:
    def _cbf(self, gpio, level, tick):   # gpio is pin with level change. level is rising/falling(or none), tick is time counter (usec)
 
       if level == 1: # Rising edge.
-
          if self._high_tick is not None:
             t = pigpio.tickDiff(self._high_tick, tick)
-
             if self._period is not None:
                self._period = (self._old * self._period) + (self._new * t)
             else:
                self._period = t
          if self._period is not None: self.logger.debug("period:{0:.1f} ms".format(self._period/1000))
          self._high_tick = tick
-
       elif level == 2: # Watchdog timeout.
-
          if self._period is not None:
             if self._period < 2000000000:
                self._period += (self._watchdog * 1000)
@@ -115,21 +111,12 @@ if __name__ == "__main__":
    gpioPin = 5
    RUN_TIME = 60.0
    SAMPLE_TIME = 1.0
-
    pi = pigpio.pi()
-
    encoder1 = Encoder(pi, gpioPin)
-
    start = time.time()
-
    while (time.time() - start) < RUN_TIME:
-
       time.sleep(SAMPLE_TIME)
-
       rpm = encoder1.getdata()
-     
       print(rpm)
-
    encoder1.cancel()
-
    pi.stop()
